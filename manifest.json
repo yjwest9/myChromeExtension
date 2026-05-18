@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "QuickSave",
+  "version": "1.0",
+  "description": "우클릭으로 할 일과 읽기 목록을 즉시 저장하는 익스텐션",
+  "permissions": ["contextMenus", "storage", "tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
+}
