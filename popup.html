@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuickSave</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <!-- 헤더 -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">📎</span>
+        <span class="logo-text">QuickSave</span>
+      </div>
+      <!-- 검색창 -->
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="전체 검색 (탭 무관)..."
+        />
+      </div>
+    </header>
+
+    <!-- 탭 버튼 -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="todo">✅ TODO</button>
+      <button class="tab-btn" data-tab="readlater">📌 Read it later</button>
+      <!-- 검색 중에만 동적으로 생기는 탭 -->
+      <button
+        class="tab-btn"
+        id="searchTab"
+        data-tab="search"
+        style="display: none"
+      >
+        🔍 검색결과
+      </button>
+    </div>
+
+    <!-- 태그 필터 -->
+    <div class="tag-filter-wrap">
+      <div id="tagFilterList" class="tag-filter-list">
+        <!-- popup.js가 동적으로 태그 버튼 생성 -->
+      </div>
+    </div>
+
+    <!-- 항목 목록 -->
+    <div class="list-wrap">
+      <ul id="itemList" class="item-list">
+        <!-- popup.js가 동적으로 <li> 생성 -->
+      </ul>
+      <div id="emptyMsg" class="empty-msg" style="display: none">
+        저장된 항목이 없습니다.<br />우클릭으로 추가해보세요!
+      </div>
+    </div>
+
+    <!-- 하단 푸터 -->
+    <div class="footer">
+      <button id="clearAllBtn" class="clear-btn">전체 삭제</button>
+      <span id="itemCount" class="item-count">0개 항목</span>
+      <button id="settingsBtn" class="settings-btn" title="설정">
+        ⚙️ 설정
+      </button>
+    </div>
+
+    <!-- ===== 메모/태그 편집 모달 ===== -->
+    <div id="editModal" class="modal-overlay" style="display: none">
+      <div class="modal-box">
+        <div class="modal-title">✏️ 메모 / 태그 편집</div>
+        <label class="modal-label">메모</label>
+        <input
+          type="text"
+          id="editMemoInput"
+          class="modal-input"
+          placeholder="저장 이유나 메모를 입력..."
+        />
+        <label class="modal-label"
+          >태그
+          <span class="modal-hint">(쉼표로 구분, 예: 과제,업무)</span></label
+        >
+        <input
+          type="text"
+          id="editTagInput"
+          class="modal-input"
+          placeholder="과제,업무,나중에..."
+        />
+        <div class="modal-actions">
+          <button id="editCancelBtn" class="modal-btn cancel">취소</button>
+          <button id="editSaveBtn" class="modal-btn save">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 설정 모달 ===== -->
+    <div id="settingsModal" class="modal-overlay" style="display: none">
+      <div class="modal-box">
+        <div class="modal-title">⚙️ 설정</div>
+
+        <!-- 단축키 활성화 토글 -->
+        <div class="settings-row">
+          <div class="settings-label">
+            <span>단축키 활성화</span>
+            <span class="modal-hint">기본값: Alt+Shift+Q</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="shortcutToggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- 단축키 변경 -->
+        <div class="shortcut-change-wrap">
+          <div class="settings-label">
+            <span>단축키 변경</span>
+            <span class="modal-hint">입력창 클릭 후 원하는 키 조합을 누르세요</span>
+          </div>
+          <div class="shortcut-edit-row">
+            <input
+              type="text"
+              id="shortcutKeyInput"
+              class="shortcut-key-input"
+              readonly
+              placeholder="Alt+Shift+Q"
+            />
+            <button id="shortcutResetBtn" class="shortcut-reset-btn">초기화</button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="settingsCloseBtn" class="modal-btn save">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 전체 삭제 확인 모달 ===== -->
+    <div id="confirmModal" class="modal-overlay" style="display: none">
+      <div class="modal-box">
+        <div class="modal-title confirm-title">⚠️ 삭제 확인</div>
+        <p id="confirmMessage" class="confirm-message"></p>
+        <div class="modal-actions">
+          <button id="confirmCancelBtn" class="modal-btn cancel">취소</button>
+          <button id="confirmOkBtn" class="modal-btn delete">삭제</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
