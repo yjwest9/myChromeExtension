@@ -23,6 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
   bindSettingsModal();
 });
 
+// storage가 변경되면 (우클릭 저장 등) 팝업을 즉시 업데이트
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+  if (changes.todo) todoList = changes.todo.newValue || [];
+  if (changes.readlater) readlaterList = changes.readlater.newValue || [];
+  if (changes.todo || changes.readlater) renderAll();
+});
+
 // 창 닫힐 때 위치 저장 (다음에 같은 위치에서 열리도록)
 window.addEventListener("beforeunload", () => {
   chrome.storage.local.set({
@@ -189,16 +197,16 @@ function createItemCard(item, listKey) {
   // ★ 추가: 편집 버튼 (방법 A — 메모/태그 수정)
   const editBtn = document.createElement("button");
   editBtn.className = "item-edit";
-  editBtn.textContent = "✏️";
   editBtn.title = "메모/태그 편집";
+  editBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
   editBtn.addEventListener("click", () => openEditModal(item, listKey));
   topRow.appendChild(editBtn);
 
   // 삭제 버튼
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "item-delete";
-  deleteBtn.textContent = "🗑️";
   deleteBtn.title = "삭제";
+  deleteBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
   deleteBtn.addEventListener("click", () => deleteItem(item.id, listKey));
   topRow.appendChild(deleteBtn);
 
@@ -614,9 +622,12 @@ function bindSettingsModal() {
 }
 
 function loadCurrentShortcut() {
-  chrome.storage.local.get(["customShortcut"], (result) => {
+  // chrome.commands.getAll()로 Chrome이 실제 등록한 단축키를 읽음
+  // → chrome://extensions/shortcuts에서 변경해도 자동 반영됨
+  chrome.commands.getAll((commands) => {
+    const cmd = commands.find((c) => c.name === "open-popup");
     const input = document.getElementById("shortcutKeyInput");
-    if (input) input.value = result.customShortcut || "Alt+Shift+Q";
+    if (input) input.value = cmd?.shortcut || "Alt+Shift+Q";
   });
 }
 

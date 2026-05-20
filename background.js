@@ -180,18 +180,26 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 function openOrFocusWindow() {
-  if (quicksaveWindowId !== null) {
-    chrome.windows.get(quicksaveWindowId, (win) => {
+  // 서비스워커 슬립 후 in-memory ID가 null일 수 있으므로 storage에서 복원
+  const tryFocus = (winId) => {
+    if (!winId) { createQuicksaveWindow(); return; }
+    chrome.windows.get(winId, (win) => {
       if (chrome.runtime.lastError || !win) {
         quicksaveWindowId = null;
+        chrome.storage.local.remove(["_winId"]);
         createQuicksaveWindow();
       } else {
-        chrome.windows.update(quicksaveWindowId, { focused: true });
+        quicksaveWindowId = winId;
+        chrome.windows.update(winId, { focused: true });
       }
     });
-    return;
+  };
+
+  if (quicksaveWindowId !== null) {
+    tryFocus(quicksaveWindowId);
+  } else {
+    chrome.storage.local.get(["_winId"], (r) => tryFocus(r._winId || null));
   }
-  createQuicksaveWindow();
 }
 
 function createQuicksaveWindow() {
@@ -209,6 +217,7 @@ function createQuicksaveWindow() {
       },
       (win) => {
         quicksaveWindowId = win.id;
+        chrome.storage.local.set({ _winId: win.id });
       }
     );
   });
@@ -217,19 +226,39 @@ function createQuicksaveWindow() {
 chrome.windows.onRemoved.addListener((windowId) => {
   if (windowId === quicksaveWindowId) {
     quicksaveWindowId = null;
+    chrome.storage.local.remove(["_winId"]);
+    return;
+  }
+  // 서비스워커 슬립으로 in-memory가 null인 경우 storage도 정리
+  if (quicksaveWindowId === null) {
+    chrome.storage.local.get(["_winId"], (r) => {
+      if (r._winId === windowId) chrome.storage.local.remove(["_winId"]);
+    });
   }
 });
 
-// 최소 창 크기 강제 (기본 크기 이하로 줄이기 불가)
-const MIN_WINDOW_WIDTH = 376;
-const MIN_WINDOW_HEIGHT = 570;
+// 최소 창 크기 강제 — 상하좌우 모두 적용
+// 서비스워커 슬립 후에도 storage에서 winId를 복원하여 동작
+const MIN_WINDOW_WIDTH = 376;  // 콘텐츠 360px + 창 테두리
+const MIN_WINDOW_HEIGHT = 400; // 헤더+탭+태그+최소목록+푸터 유지 가능한 최소값
 
 chrome.windows.onBoundsChanged.addListener((win) => {
-  if (win.id !== quicksaveWindowId) return;
-  const newW = Math.max(win.width, MIN_WINDOW_WIDTH);
-  const newH = Math.max(win.height, MIN_WINDOW_HEIGHT);
-  if (newW !== win.width || newH !== win.height) {
-    chrome.windows.update(win.id, { width: newW, height: newH });
+  const enforce = (winId) => {
+    if (!winId || win.id !== winId) return;
+    const newW = Math.max(win.width, MIN_WINDOW_WIDTH);
+    const newH = Math.max(win.height, MIN_WINDOW_HEIGHT);
+    if (newW !== win.width || newH !== win.height) {
+      chrome.windows.update(win.id, { width: newW, height: newH });
+    }
+  };
+
+  if (quicksaveWindowId !== null) {
+    enforce(quicksaveWindowId);
+  } else {
+    chrome.storage.local.get(["_winId"], (r) => {
+      if (r._winId) quicksaveWindowId = r._winId;
+      enforce(r._winId || null);
+    });
   }
 });
 

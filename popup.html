@@ -10,12 +10,12 @@
     <!-- 헤더 -->
     <header class="header">
       <div class="logo">
-        <span class="logo-icon">📎</span>
+        <span class="logo-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="var(--accent)" xmlns="http://www.w3.org/2000/svg"><path d="M6 2h12a1 1 0 0 1 1 1v18l-7-3.5L5 21V3a1 1 0 0 1 1-1z"/></svg></span>
         <span class="logo-text">QuickSave</span>
       </div>
       <!-- 검색창 -->
       <div class="search-wrap">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></span>
         <input
           type="text"
           id="searchInput"
@@ -27,8 +27,8 @@
 
     <!-- 탭 버튼 -->
     <div class="tab-bar">
-      <button class="tab-btn active" data-tab="todo">✅ TODO</button>
-      <button class="tab-btn" data-tab="readlater">📌 Read it later</button>
+      <button class="tab-btn active" data-tab="todo">TODO</button>
+      <button class="tab-btn" data-tab="readlater">Read it later</button>
       <!-- 검색 중에만 동적으로 생기는 탭 -->
       <button
         class="tab-btn"
@@ -36,7 +36,7 @@
         data-tab="search"
         style="display: none"
       >
-        🔍 검색결과
+        검색결과
       </button>
     </div>
 
@@ -62,14 +62,15 @@
       <button id="clearAllBtn" class="clear-btn">전체 삭제</button>
       <span id="itemCount" class="item-count">0개 항목</span>
       <button id="settingsBtn" class="settings-btn" title="설정">
-        ⚙️ 설정
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="8" cy="6" r="2.5" fill="white"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="16" cy="12" r="2.5" fill="white"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="10" cy="18" r="2.5" fill="white"/></svg>
+        설정
       </button>
     </div>
 
     <!-- ===== 메모/태그 편집 모달 ===== -->
     <div id="editModal" class="modal-overlay" style="display: none">
       <div class="modal-box">
-        <div class="modal-title">✏️ 메모 / 태그 편집</div>
+        <div class="modal-title">메모 / 태그 편집</div>
         <label class="modal-label">메모</label>
         <input
           type="text"
@@ -97,7 +98,7 @@
     <!-- ===== 설정 모달 ===== -->
     <div id="settingsModal" class="modal-overlay" style="display: none">
       <div class="modal-box">
-        <div class="modal-title">⚙️ 설정</div>
+        <div class="modal-title">설정</div>
 
         <!-- 단축키 활성화 토글 -->
         <div class="settings-row">
@@ -138,7 +139,7 @@
     <!-- ===== 전체 삭제 확인 모달 ===== -->
     <div id="confirmModal" class="modal-overlay" style="display: none">
       <div class="modal-box">
-        <div class="modal-title confirm-title">⚠️ 삭제 확인</div>
+        <div class="modal-title confirm-title">삭제 확인</div>
         <p id="confirmMessage" class="confirm-message"></p>
         <div class="modal-actions">
           <button id="confirmCancelBtn" class="modal-btn cancel">취소</button>
