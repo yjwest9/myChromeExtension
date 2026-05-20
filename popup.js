@@ -1,5 +1,5 @@
 // =====================================================
-// popup.js - QuickSave 팝업 동작 로직 (전체 수정본)
+// popup.js - QuickSave 팝업 동작 로직
 // =====================================================
 
 // --- 상태 변수 ---
@@ -8,8 +8,8 @@ let selectedTag = "전체";
 let searchQuery = "";
 let todoList = [];
 let readlaterList = [];
-let editingId = null; // 현재 편집 중인 항목 id
-let editingListKey = null; // "todo" | "readlater"
+let editingId = null;
+let editingListKey = null;
 
 // =====================================================
 // 1. 초기 실행
@@ -23,7 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
   bindSettingsModal();
 });
 
-// storage가 변경되면 (우클릭 저장 등) 팝업을 즉시 업데이트
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if (changes.todo) todoList = changes.todo.newValue || [];
@@ -31,7 +30,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.todo || changes.readlater) renderAll();
 });
 
-// 창 닫힐 때 위치 저장 (다음에 같은 위치에서 열리도록)
 window.addEventListener("beforeunload", () => {
   chrome.storage.local.set({
     popupX: window.screenX,
@@ -49,7 +47,6 @@ function loadData() {
       todoList = result.todo || [];
       readlaterList = result.readlater || [];
 
-      // 단축키 토글 상태 복원 (기본값: 활성화)
       const toggle = document.getElementById("shortcutToggle");
       toggle.checked = result.shortcutEnabled !== false;
 
@@ -68,10 +65,8 @@ function renderAll() {
 
 // =====================================================
 // 4. 태그 필터 버튼 렌더링
-// — "전체" 버튼 클릭 시 selectedTag를 "전체"로 설정하고 active 처리
 // =====================================================
 function renderTagFilter() {
-  // 검색 탭일 때는 todo + readlater 합쳐서 태그 추출
   const list =
     currentTab === "search"
       ? [...todoList, ...readlaterList]
@@ -91,11 +86,10 @@ function renderTagFilter() {
 
   allTags.forEach((tag) => {
     const btn = document.createElement("button");
-    // ★ 수정: selectedTag와 같으면 active 클래스 부여 ("전체" 포함)
     btn.className = "tag-filter-btn" + (tag === selectedTag ? " active" : "");
     btn.textContent = tag === "전체" ? "전체" : `#${tag}`;
     btn.addEventListener("click", () => {
-      selectedTag = tag; // "전체" 클릭 시 selectedTag = "전체" 로 정상 설정
+      selectedTag = tag;
       renderAll();
     });
     container.appendChild(btn);
@@ -104,25 +98,21 @@ function renderTagFilter() {
 
 // =====================================================
 // 5. 항목 목록 렌더링
-// — 검색어 있으면 currentTab 무관하게 전체에서 검색
 // =====================================================
 function renderList() {
   let list;
 
   if (currentTab === "search") {
-    // 검색 탭: todo + readlater 합쳐서 검색
     list = [...todoList, ...readlaterList];
   } else {
     list = currentTab === "todo" ? todoList : readlaterList;
   }
 
-  // 태그 필터
   let filtered = list;
   if (selectedTag !== "전체") {
     filtered = list.filter((item) => (item.tags || []).includes(selectedTag));
   }
 
-  // 검색어 필터
   if (searchQuery.trim() !== "") {
     const q = searchQuery.trim().toLowerCase();
     filtered = filtered.filter(
@@ -151,7 +141,6 @@ function renderList() {
   countEl.textContent = `${filtered.length}개 항목`;
 
   filtered.forEach((item) => {
-    // 검색 탭일 때 이 항목이 todo인지 readlater인지 판별
     const listKey =
       currentTab === "search"
         ? todoList.find((t) => t.id === item.id)
@@ -162,19 +151,30 @@ function renderList() {
     const li = createItemCard(item, listKey);
     ul.appendChild(li);
   });
+
+  if (currentTab !== "search") {
+    bindDragEvents(ul, currentTab);
+  }
 }
 
 // =====================================================
 // 6. 항목 카드 생성
-// — 편집 버튼(✏️) 추가 (방법 A)
 // =====================================================
 function createItemCard(item, listKey) {
   const li = document.createElement("li");
   li.className = "item-card" + (item.done ? " done" : "");
   li.dataset.id = item.id;
+  li.draggable = currentTab !== "search";
 
   const topRow = document.createElement("div");
   topRow.className = "item-top";
+
+  // 드래그 핸들
+  const dragHandle = document.createElement("span");
+  dragHandle.className = "drag-handle";
+  dragHandle.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>`;
+  if (currentTab === "search") dragHandle.style.visibility = "hidden";
+  topRow.appendChild(dragHandle);
 
   // 체크박스 (TODO만)
   if (listKey === "todo") {
@@ -186,6 +186,20 @@ function createItemCard(item, listKey) {
     topRow.appendChild(checkbox);
   }
 
+  // 파비콘
+  const favicon = document.createElement("img");
+  favicon.className = "item-favicon";
+  try {
+    const domain = new URL(item.url).hostname;
+    favicon.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+  } catch {
+    favicon.style.display = "none";
+  }
+  favicon.onerror = () => {
+    favicon.style.display = "none";
+  };
+  topRow.appendChild(favicon);
+
   // 제목
   const title = document.createElement("span");
   title.className = "item-title";
@@ -194,7 +208,7 @@ function createItemCard(item, listKey) {
   title.addEventListener("click", () => chrome.tabs.create({ url: item.url }));
   topRow.appendChild(title);
 
-  // ★ 추가: 편집 버튼 (방법 A — 메모/태그 수정)
+  // 편집 버튼
   const editBtn = document.createElement("button");
   editBtn.className = "item-edit";
   editBtn.title = "메모/태그 편집";
@@ -227,11 +241,11 @@ function createItemCard(item, listKey) {
   const tagsWrap = document.createElement("div");
   tagsWrap.className = "item-tags";
 
-  // 검색 탭: 타입 뱃지를 태그와 같은 행에 표시
   if (currentTab === "search") {
     const typeBadge = document.createElement("span");
     typeBadge.className =
-      "item-type-badge " + (listKey === "todo" ? "badge-todo" : "badge-readlater");
+      "item-type-badge " +
+      (listKey === "todo" ? "badge-todo" : "badge-readlater");
     typeBadge.textContent = listKey === "todo" ? "✅ TODO" : "📌 Read it later";
     tagsWrap.appendChild(typeBadge);
   }
@@ -265,7 +279,6 @@ function toggleDone(id) {
 
 // =====================================================
 // 8. 항목 삭제
-// — listKey 파라미터로 todo/readlater 구분 (검색 탭 대응)
 // =====================================================
 function deleteItem(id, listKey) {
   if (listKey === "todo") {
@@ -299,13 +312,14 @@ function bindClearEvent() {
       } else {
         todoList = [];
         readlaterList = [];
-        chrome.storage.local.set({ todo: [], readlater: [] }, () => renderAll());
+        chrome.storage.local.set({ todo: [], readlater: [] }, () =>
+          renderAll(),
+        );
       }
     });
   });
 }
 
-// 커스텀 confirm 모달
 function showConfirm(message, onConfirm) {
   const modal = document.getElementById("confirmModal");
   document.getElementById("confirmMessage").textContent = message;
@@ -319,8 +333,13 @@ function showConfirm(message, onConfirm) {
     okBtn.removeEventListener("click", handleOk);
     cancelBtn.removeEventListener("click", handleCancel);
   }
-  function handleOk() { close(); onConfirm(); }
-  function handleCancel() { close(); }
+  function handleOk() {
+    close();
+    onConfirm();
+  }
+  function handleCancel() {
+    close();
+  }
 
   okBtn.addEventListener("click", handleOk);
   cancelBtn.addEventListener("click", handleCancel);
@@ -340,7 +359,6 @@ function bindTabEvents() {
       currentTab = btn.dataset.tab;
       selectedTag = "전체";
 
-      // 검색 탭이 아닌 탭을 누르면 검색어 초기화
       if (currentTab !== "search") {
         searchQuery = "";
         document.getElementById("searchInput").value = "";
@@ -354,8 +372,6 @@ function bindTabEvents() {
 
 // =====================================================
 // 11. 검색 이벤트
-// — 검색어 입력 시 자동으로 "검색결과" 탭 활성화 (전체 탭 통합 검색)
-// — 검색어 지우면 이전 탭으로 복귀
 // =====================================================
 function bindSearchEvent() {
   document.getElementById("searchInput").addEventListener("input", (e) => {
@@ -363,7 +379,6 @@ function bindSearchEvent() {
     const searchTabBtn = document.getElementById("searchTab");
 
     if (searchQuery.trim() !== "") {
-      // 검색 탭 표시 + 활성화
       searchTabBtn.style.display = "";
       document
         .querySelectorAll(".tab-btn")
@@ -372,7 +387,6 @@ function bindSearchEvent() {
       currentTab = "search";
       selectedTag = "전체";
     } else {
-      // 검색어 없으면 검색 탭 숨기고 TODO 탭으로 복귀
       searchTabBtn.style.display = "none";
       currentTab = "todo";
       document
@@ -388,7 +402,7 @@ function bindSearchEvent() {
 }
 
 // =====================================================
-// 12. 메모/태그 편집 모달 (방법 A)
+// 12. 메모/태그 편집 모달
 // =====================================================
 function openEditModal(item, listKey) {
   editingId = item.id;
@@ -400,7 +414,6 @@ function openEditModal(item, listKey) {
 }
 
 function bindEditModal() {
-  // 엔터키로 저장
   ["editMemoInput", "editTagInput"].forEach((id) => {
     document.getElementById(id).addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -410,14 +423,12 @@ function bindEditModal() {
     });
   });
 
-  // 취소
   document.getElementById("editCancelBtn").addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
     editingId = null;
     editingListKey = null;
   });
 
-  // 저장
   document.getElementById("editSaveBtn").addEventListener("click", () => {
     if (editingId === null) return;
 
@@ -452,21 +463,23 @@ function bindEditModal() {
 }
 
 // =====================================================
-// 13. 설정 모달 (단축키 ON/OFF + 단축키 실시간 캡처)
+// 13. 설정 모달
 // =====================================================
 function bindSettingsModal() {
   const keyInput = document.getElementById("shortcutKeyInput");
   const actionBtn = document.getElementById("shortcutResetBtn");
 
-  // 상태 변수
   let isCapturing = false;
-  let heldMods = new Set();   // 현재 눌린 수식키 (Control, Alt, Shift)
-  let heldNonMod = null;      // 현재 눌린 일반 키
-  let pendingShortcut = null; // 적용 대기 중인 단축키 문자열
+  let heldMods = new Set();
+  let heldNonMod = null;
+  let pendingShortcut = null;
 
   const MODIFIER_KEYS = ["Control", "Alt", "Shift", "Meta", "CapsLock"];
   const KEY_ALIAS = {
-    ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right",
+    ArrowUp: "Up",
+    ArrowDown: "Down",
+    ArrowLeft: "Left",
+    ArrowRight: "Right",
     " ": "Space",
   };
 
@@ -490,7 +503,8 @@ function bindSettingsModal() {
     }
     const mods = getModParts();
     if (heldNonMod) {
-      if (mods.length > 0) keyInput.value = [...mods, normalizeKey(heldNonMod)].join("+");
+      if (mods.length > 0)
+        keyInput.value = [...mods, normalizeKey(heldNonMod)].join("+");
     } else if (mods.length > 0) {
       keyInput.value = mods.join("+");
     } else {
@@ -518,24 +532,20 @@ function bindSettingsModal() {
     loadCurrentShortcut();
   }
 
-  // 설정 버튼 → 모달 열기
   document.getElementById("settingsBtn").addEventListener("click", () => {
     document.getElementById("settingsModal").style.display = "flex";
     loadCurrentShortcut();
   });
 
-  // 닫기 버튼
   document.getElementById("settingsCloseBtn").addEventListener("click", () => {
     cancelCapture();
     document.getElementById("settingsModal").style.display = "none";
   });
 
-  // 단축키 활성화 토글
   document.getElementById("shortcutToggle").addEventListener("change", (e) => {
     chrome.storage.local.set({ shortcutEnabled: e.target.checked });
   });
 
-  // 입력창 클릭 → 캡처 시작 (apply 대기 중이면 다시 캡처)
   keyInput.addEventListener("click", () => {
     pendingShortcut = null;
     heldMods.clear();
@@ -546,18 +556,19 @@ function bindSettingsModal() {
     resetBtn();
   });
 
-  // 포커스 잃으면 취소
   keyInput.addEventListener("blur", () => {
     if (isCapturing) cancelCapture();
   });
 
-  // 키 누름 — 실시간 업데이트
   keyInput.addEventListener("keydown", (e) => {
     if (!isCapturing) return;
     e.preventDefault();
     e.stopPropagation();
 
-    if (e.key === "Escape") { cancelCapture(); return; }
+    if (e.key === "Escape") {
+      cancelCapture();
+      return;
+    }
 
     if (MODIFIER_KEYS.includes(e.key)) {
       heldMods.add(e.key);
@@ -571,7 +582,6 @@ function bindSettingsModal() {
     refreshDisplay();
   });
 
-  // 키 뗌 — 모든 키를 떼면 적용 대기 상태로 전환
   keyInput.addEventListener("keyup", (e) => {
     if (!isCapturing) return;
 
@@ -582,7 +592,6 @@ function bindSettingsModal() {
     }
 
     if (pendingShortcut && heldMods.size === 0 && !heldNonMod) {
-      // 완성된 조합 + 모든 키 해제 → 적용 대기
       isCapturing = false;
       keyInput.classList.remove("capturing");
       keyInput.value = pendingShortcut;
@@ -592,25 +601,26 @@ function bindSettingsModal() {
     }
   });
 
-  // 초기화 / 적용 버튼
   actionBtn.addEventListener("click", () => {
     if (actionBtn.dataset.mode === "apply" && pendingShortcut) {
       const toApply = pendingShortcut;
       pendingShortcut = null;
       resetBtn();
       chrome.storage.local.set({ customShortcut: toApply }, () => {
-        chrome.runtime.sendMessage({ type: "updateShortcut", shortcut: toApply }, (response) => {
-          if (response && response.success) {
-            keyInput.value = toApply;
-          } else {
-            chrome.storage.local.remove(["customShortcut"]);
-            keyInput.value = "사용 불가 단축키";
-            setTimeout(() => loadCurrentShortcut(), 1500);
-          }
-        });
+        chrome.runtime.sendMessage(
+          { type: "updateShortcut", shortcut: toApply },
+          (response) => {
+            if (response && response.success) {
+              keyInput.value = toApply;
+            } else {
+              chrome.storage.local.remove(["customShortcut"]);
+              keyInput.value = "사용 불가 단축키";
+              setTimeout(() => loadCurrentShortcut(), 1500);
+            }
+          },
+        );
       });
     } else {
-      // 초기화 → Alt+Shift+Q 복원
       pendingShortcut = null;
       chrome.storage.local.remove(["customShortcut"], () => {
         chrome.runtime.sendMessage({ type: "resetShortcut" }, () => {
@@ -622,8 +632,6 @@ function bindSettingsModal() {
 }
 
 function loadCurrentShortcut() {
-  // chrome.commands.getAll()로 Chrome이 실제 등록한 단축키를 읽음
-  // → chrome://extensions/shortcuts에서 변경해도 자동 반영됨
   chrome.commands.getAll((commands) => {
     const cmd = commands.find((c) => c.name === "open-popup");
     const input = document.getElementById("shortcutKeyInput");
@@ -631,3 +639,56 @@ function loadCurrentShortcut() {
   });
 }
 
+// =====================================================
+// 14. 드래그로 순서 변경
+// =====================================================
+function bindDragEvents(ul, listKey) {
+  let dragSrcEl = null;
+
+  ul.querySelectorAll(".item-card").forEach((card) => {
+    card.addEventListener("dragstart", (e) => {
+      dragSrcEl = card;
+      card.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      ul.querySelectorAll(".item-card").forEach((c) =>
+        c.classList.remove("drag-over"),
+      );
+    });
+
+    card.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (card !== dragSrcEl) {
+        ul.querySelectorAll(".item-card").forEach((c) =>
+          c.classList.remove("drag-over"),
+        );
+        card.classList.add("drag-over");
+      }
+    });
+
+    card.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (!dragSrcEl || dragSrcEl === card) return;
+
+      const cards = [...ul.querySelectorAll(".item-card")];
+      const srcIdx = cards.indexOf(dragSrcEl);
+      const dstIdx = cards.indexOf(card);
+
+      const list = listKey === "todo" ? todoList : readlaterList;
+      const [moved] = list.splice(srcIdx, 1);
+      list.splice(dstIdx, 0, moved);
+
+      if (listKey === "todo") {
+        chrome.storage.local.set({ todo: todoList }, () => renderAll());
+      } else {
+        chrome.storage.local.set({ readlater: readlaterList }, () =>
+          renderAll(),
+        );
+      }
+    });
+  });
+}
