@@ -3,6 +3,15 @@
 // 역할: 우클릭 메뉴 등록 + 메시지 처리 + 데이터 저장 + 창 관리 + 뱃지 + 알림
 // =====================================================
 
+// 익스텐션 재로드 시 이미 열려있는 탭에도 content.js 주입 (manifest는 새 탭만 자동 주입)
+chrome.tabs.query({}, (tabs) => {
+  for (const tab of tabs) {
+    if (!tab.url || tab.url.startsWith("chrome")) continue;
+    chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] })
+      .catch(() => {});
+  }
+});
+
 // 서비스워커 재시작 시 사용자 지정 단축키를 storage에서 복원해 재적용
 // (서비스워커는 슬립 후 재기동되면 in-memory 상태가 초기화되므로 필수)
 chrome.storage.local.get(["customShortcut"], (result) => {
@@ -94,24 +103,58 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // 우클릭 메뉴 클릭 이벤트 처리
-// - 링크 위에서 클릭하면 linkUrl, 아니면 현재 탭 URL 사용
+// - 링크 위에서 클릭하면 링크 텍스트를 3단계 방법으로 순서대로 시도해 제목으로 사용
 // - 텍스트를 드래그 선택한 뒤 클릭하면 selectionText를 메모에 자동 채움
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  const newItem = {
-    id: Date.now(),
-    title: tab.title || "제목 없음",
-    url: info.linkUrl || tab.url,
-    date: new Date().toLocaleDateString("ko-KR"),
-    memo: info.selectionText || "",
-    tags: [],
-    done: false,
-  };
-
-  if (info.menuItemId === "save-todo") {
-    saveItem("todo", newItem, tab.id);
-  } else if (info.menuItemId === "save-readlater") {
-    saveItem("readlater", newItem, tab.id);
+  function doSave(title) {
+    const newItem = {
+      id: Date.now(),
+      title: title || tab.title || "제목 없음",
+      url: info.linkUrl || tab.url,
+      date: new Date().toLocaleDateString("ko-KR"),
+      memo: info.selectionText || "",
+      tags: [],
+      done: false,
+    };
+    if (info.menuItemId === "save-todo") saveItem("todo", newItem, tab.id);
+    else if (info.menuItemId === "save-readlater") saveItem("readlater", newItem, tab.id);
   }
+
+  if (!info.linkUrl) {
+    doSave(tab.title);
+    return;
+  }
+
+  // 방법 1: content.js가 우클릭 순간 session에 저장한 링크 텍스트
+  chrome.storage.session.get(["_qsLinkText"], (result) => {
+    const t1 = result._qsLinkText && result._qsLinkText.trim();
+    if (t1) { doSave(t1); return; }
+
+    // 방법 2: Chrome API가 제공하는 info.linkText (가끔 비어있음)
+    const t2 = info.linkText && info.linkText.trim();
+    if (t2) { doSave(t2); return; }
+
+    // 방법 3: 페이지 DOM에서 URL로 <a> 찾기 (decodeURIComponent로 인코딩 차이 처리)
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (href) => {
+        const decode = u => { try { return decodeURIComponent(u); } catch { return u; } };
+        const target = decode(href);
+        for (const a of document.querySelectorAll("a")) {
+          try {
+            if (decode(a.href) === target) {
+              const t = a.textContent.trim();
+              if (t) return t;
+            }
+          } catch {}
+        }
+        return null;
+      },
+      args: [info.linkUrl],
+    }, (results) => {
+      doSave(results?.[0]?.result || tab.title);
+    });
+  });
 });
 
 // =====================================================
@@ -156,7 +199,7 @@ function saveItem(key, newItem, tabId) {
 
     const updatedList = [newItem, ...existingList];
     chrome.storage.local.set({ [key]: updatedList }, () => {
-      const label = key === "todo" ? "할 일" : "LATER";
+      const label = key === "todo" ? "할 일" : "나중에 읽기";
       showNotification(tabId, `✅ ${label}에 저장되었습니다!`);
     });
   });
