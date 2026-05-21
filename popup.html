@@ -28,7 +28,7 @@
     <!-- 탭 버튼 -->
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="todo">TODO</button>
-      <button class="tab-btn" data-tab="readlater">Read it later</button>
+      <button class="tab-btn" data-tab="readlater">LATER</button>
       <!-- 검색 중에만 동적으로 생기는 탭 -->
       <button
         class="tab-btn"
@@ -38,6 +38,12 @@
       >
         검색결과
       </button>
+    </div>
+
+    <!-- 빠른 할 일 추가 (TODO 탭에서만 표시) -->
+    <div id="quickAddRow" class="quick-add-row">
+      <input type="text" id="quickAddInput" class="quick-add-input" placeholder="할 일 빠르게 추가... (Enter)" />
+      <button id="quickAddBtn" class="quick-add-btn" title="추가">+</button>
     </div>
 
     <!-- 태그 필터 -->
@@ -88,6 +94,8 @@
           class="modal-input"
           placeholder="과제,업무,나중에..."
         />
+        <label class="modal-label">알림 일시 <span class="modal-hint">(선택 — 지정한 시각에 Windows 알림)</span></label>
+        <input type="datetime-local" id="editAlarmInput" class="modal-input" />
         <div class="modal-actions">
           <button id="editCancelBtn" class="modal-btn cancel">취소</button>
           <button id="editSaveBtn" class="modal-btn save">저장</button>
@@ -128,6 +136,23 @@
             />
             <button id="shortcutResetBtn" class="shortcut-reset-btn">초기화</button>
           </div>
+        </div>
+
+        <!-- 데이터 관리 -->
+        <div class="settings-label" style="margin-top:2px">
+          <span>데이터 관리</span>
+          <span class="modal-hint">백업 및 복원</span>
+        </div>
+        <div class="settings-btn-row">
+          <button id="exportBtn" class="settings-action-btn">📤 내보내기</button>
+          <button id="importBtn" class="settings-action-btn">📥 가져오기</button>
+          <input type="file" id="importFileInput" accept=".json" style="display:none" />
+        </div>
+
+        <!-- 저장 통계 -->
+        <div class="stats-wrap">
+          <div class="stats-title">이번 주 통계</div>
+          <div id="statsContent"></div>
         </div>
 
         <div class="modal-actions">

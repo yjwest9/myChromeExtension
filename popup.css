@@ -138,6 +138,50 @@ body {
   border-bottom-color: var(--accent);
 }
 
+/* ── Quick Add ── */
+.quick-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.quick-add-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  font-size: 12px;
+  padding: 7px 14px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.quick-add-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+}
+.quick-add-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.quick-add-btn:hover {
+  opacity: 0.82;
+}
+
 /* ── Tag Filter ── */
 .tag-filter-wrap {
   padding: 7px 14px 6px;
@@ -613,6 +657,109 @@ body {
   flex-shrink: 0;
   margin-top: 1px;
   object-fit: contain;
+}
+
+/* ── Pin Button ── */
+.item-pin {
+  background: none;
+  border: none;
+  color: var(--text-hint);
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+}
+.item-pin:hover {
+  color: var(--accent);
+}
+.item-pin.pinned {
+  color: var(--accent);
+}
+
+/* ── Pinned Card ── */
+.item-card.pinned-card {
+  border-left: 3px solid var(--accent);
+}
+
+/* ── Overdue Card ── */
+.item-card.overdue {
+  border-color: #ffb3b3;
+}
+.item-card.overdue:hover {
+  border-color: var(--red);
+}
+
+/* ── Due Date Badge ── */
+.item-date-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.item-due-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.item-due-badge.overdue {
+  background: #ffe0e0;
+  color: var(--red);
+}
+
+/* ── Settings Action Buttons (Export/Import) ── */
+.settings-btn-row {
+  display: flex;
+  gap: 8px;
+}
+.settings-action-btn {
+  flex: 1;
+  background: var(--bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 0;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.settings-action-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* ── Stats ── */
+.stats-wrap {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.stats-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-hint);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 2px;
+}
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.stats-value {
+  font-weight: 700;
+  color: var(--accent);
 }
 
 /* ── Drag ── */
